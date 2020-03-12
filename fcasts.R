@@ -21,6 +21,7 @@ cov19_dead_all <-
 cov19_dead_age <-
   read_csv("age_death_rate.csv")
 
+# https://population.un.org/wpp/Download/Files/1_Indicators%20(Standard)/CSV_FILES/WPP2019_PopulationByAgeSex_Medium.csv
 world_pop <-
   read_csv("WPP2019_PopulationByAgeSex_Medium.csv") %>%
   filter(Time == 2018) %>%
@@ -83,8 +84,8 @@ repl <- c(
 cov19_dead$Location <- stri_replace_all_fixed(cov19_dead$country, patt, repl, vectorize_all = FALSE)
 print("Unmatched countries (after renaming)")
 print(setdiff(
-  cov19_dead$country,
-  intersect(cov19_dead$country, world_pop$Location)
+  cov19_dead$Location,
+  intersect(cov19_dead$Location, world_pop$Location)
 ))
 
 world_death_rate <-
