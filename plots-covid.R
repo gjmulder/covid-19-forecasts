@@ -168,6 +168,7 @@ pop_death <-
   mutate_if(is.double, function(d)
     return(d / as.integer(.$population.1M))) %>%
   select(-Location, -population.1M) %>%
+  mutate(country = paste0("   ", country)) %>%
   gather(date.str, deaths, -country) %>%
   filter(!is.infinite(deaths)) %>%
   filter(deaths > 0.3) %>%
@@ -179,6 +180,7 @@ pop_death <-
 gg <-
   ggplot(pop_death, aes(x = day.number, y = deaths, colour = country)) +
   geom_line() +
+  geom_point() +
   scale_y_log10() +
   scale_x_log10() +
   xlab("Day number") +
