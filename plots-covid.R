@@ -185,7 +185,8 @@ pop_death_joined <-
   select(-Location)
 
 china_rest <-
-  paste0("China-", setdiff(china_prov_pop$Division, c("Hubei", "Hainan", "Hong Kong")))
+  paste0("China-", setdiff(china_prov_pop$Division, c("Hubei")))
+# paste0("China-", setdiff(china_prov_pop$Division, c("Hubei", "Hainan", "Hong Kong")))
 
 pop_death_china_rest <-
   pop_death_joined %>%
@@ -218,7 +219,7 @@ gg <-
   scale_x_log10() +
   xlab("Day number") +
   ylab("Deaths per 1M population greater than 59 years of age") +
-  ggtitle("Covid-19 deaths per 1M older aged people (log scales)") +
+  ggtitle("Covid-19 deaths per 1M older-aged people (log scales)") +
   geom_dl(aes(label = country), method = list(dl.combine("last.points"), rot =
                                                 -30, cex = 0.7)) +
   guides(col = guide_legend(ncol = 1))
