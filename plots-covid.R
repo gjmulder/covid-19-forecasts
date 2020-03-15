@@ -19,13 +19,16 @@ cov19_dead_all <-
 # cov19_recovered_all <-
 #   read_csv(paste0(jhu_url_base, "time_series_19-covid-Recovered.csv"))
 
-# cov19_dead_age <-
-#   read_csv("age_death_rate.csv") %>%
-#   mutate(death.rate.china = death.rate.5year.china * age.range.proportion) %>%
-#   mutate(death.rate.korea = death.rate.5year.korea * age.range.proportion) %>%
-#   select(-death.rate.5year.china,
-#          -death.rate.5year.korea,
-#          -age.range.proportion)
+# https://population.un.org/wpp/Download/Files/1_Indicators%20(Standard)/CSV_FILES/WPP2019_PopulationByAgeSex_Medium.csv
+world_pop <-
+  read_csv("WPP2019_PopulationByAgeSex_Medium.csv") %>%
+  filter(Time == 2018) %>%
+  select(Location, AgeGrp, PopMale, PopFemale)
+
+china_prov_pop <-
+  read_csv("china-province-population.csv")
+
+###########################################################################################################################
 
 old_age <-
   c("60-64",
@@ -38,32 +41,34 @@ old_age <-
     "95-99",
     "100+")
 
-# cov19_dead_tot <-
-#   cov19_dead_age %>%
-#   select(-AgeGrp) %>%
-#   colSums
-#
-# cov19_old_dead_prop <-
-#   cov19_dead_age %>%
-#   filter(AgeGrp %in% old_age) %>%
-#   select(-AgeGrp) %>%
-#   colSums / cov19_dead_tot
-#
-# cov19_young_dead_prop <-
-#   cov19_dead_age %>%
+cov19_cfr <-
+  read_csv("case_fatality_rate.csv") %>%
+  mutate(cfr.prop.china = cfr.china * age.range.prop) %>%
+  mutate(cfr.prop.korea = cfr.korea  * age.range.prop) %>%
+  mutate(cfr.prop.diamond.princess = cfr.diamond.princess  * age.range.prop) %>%
+  select(-cfr.china,
+         -cfr.korea,
+         -cfr.diamond.princess)
+
+cov19_cfr_tot <-
+  cov19_cfr %>%
+  select(-AgeGrp) %>%
+  colSums
+
+cov19_old_cfr_prop <-
+  cov19_cfr %>%
+  filter(AgeGrp %in% old_age) %>%
+  select(-AgeGrp) %>%
+  colSums / cov19_cfr_tot
+print(old_age)
+print(cov19_old_cfr_prop)
+
+# cov19_young_cfr_prop <-
+#   cov19_cfr %>%
 #   filter(! AgeGrp %in% old_age) %>%
 #   select(-AgeGrp) %>%
-#   colSums / cov19_dead_tot
-
-# https://population.un.org/wpp/Download/Files/1_Indicators%20(Standard)/CSV_FILES/WPP2019_PopulationByAgeSex_Medium.csv
-world_pop <-
-  read_csv("WPP2019_PopulationByAgeSex_Medium.csv") %>%
-  filter(Time == 2018) %>%
-  select(Location, AgeGrp, PopMale, PopFemale)
-
-china_prov_pop <-
-  read_csv("china-province-population.csv")
-
+#   colSums / cov19_cfr_tot
+# print(cov19_old_cfr_prop)
 
 ###########################################################################################################################
 #
@@ -133,40 +138,50 @@ patt <- c(
   "Andorra",
   "Bolivia",
   "Brunei",
+  "Cayman Islands",
   "Congo (Kinshasa)",
   "Cote d'Ivoire",
   "Cruise Ship",
+  "Curacao",
   "Holy See",
   "Iran",
+  "Jersey",
   "Korea, South",
   "Liechtenstein",
   "Moldova",
   "Monaco",
+  "occupied Palestinian territory",
   "Reunion",
   "Russia",
   "San Marino",
   "Taiwan*",
   "US",
+  "Venezuela",
   "Vietnam"
 )
 repl <- c(
   NA,
   "Bolivia (Plurinational State of)",
   "Brunei Darussalam",
+  NA,
   "Congo",
   "Côte d'Ivoire",
   NA,
+  "Curaçao",
   NA,
   "Iran (Islamic Republic of)",
+  NA,
   "Republic of Korea",
   NA,
   "Republic of Moldova",
   NA,
+  "State of Palestine",
   NA,
   "Russian Federation",
   NA,
   "China, Taiwan Province of China",
   "United States of America",
+  "Venezuela (Bolivarian Republic of)",
   "Viet Nam"
 )
 cov19_dead$Location <-
@@ -179,7 +194,7 @@ print(setdiff(
 
 ###########################################################################################################################
 
-plot_deaths <- function(pop_death_subset, day_number, max_day_number) {
+plot_deaths <- function(pop_death_subset) {
   gg <-
     ggplot(pop_death_subset,
            aes(x = day.number, y = deaths, colour = country)) +
@@ -187,20 +202,16 @@ plot_deaths <- function(pop_death_subset, day_number, max_day_number) {
     scale_y_log10(
       labels = c(0.01, 0.1, 1, 10, 100),
       breaks = c(0.01, 0.1, 1, 10, 100),
-      limits = c(0.01, 400)
+      limits = c(0.1, 400)
     ) +
-    xlim(1, max_day_number + 10) +
-    xlab("Day number") +
+    xlim(1, max(pop_death_long$day.number) + 10) +
+    xlab("Covid-19 country-specific outbreak day number") +
     ylab("Deaths per 1M population greater than 59 years of age (log scale)") +
-    ggtitle(
-      paste0(
-        "Day #",
-        day_number,
-        " - Covid-19 deaths per 1M maximum-risk (as of ",
-        today() - 1,
-        ")"
-      )
-    ) +
+    ggtitle(paste0(
+      "Covid-19 deaths per 1M maximum-risk people (as of ",
+      max(pop_death_long$dt),
+      ")"
+    )) +
     geom_dl(aes(label = country), method = list(dl.combine("last.points"))) +
     theme(legend.position = "none") +
     geom_hline(yintercept = 1.0) +
@@ -239,7 +250,7 @@ pop_death_long <-
   mutate(country = paste0("  ", country)) %>%
   gather(date.str, deaths, -country) %>%
   filter(!is.infinite(deaths)) %>%
-  filter(deaths > 0.001) %>%
+  filter(deaths > 0.1) %>%
   mutate(dt = mdy(date.str)) %>%
   group_by(country) %>%
   arrange(dt) %>%
@@ -248,14 +259,14 @@ pop_death_long <-
 # filter(day.number > 3)
 
 if (interactive()) {
-  print(plot_deaths(pop_death_long, max(pop_death_long$day.number), max(pop_death_long$day.number)))
+  print(plot_deaths(pop_death_long))
 } else {
   start_day <-
     7
   for (day_number in start_day:max(pop_death_long$day.number)) {
     print(paste0("Generating plot for day: ", day_number))
     gg <-
-      plot_deaths(pop_death_long %>% filter(day.number < day_number), day_number, max(pop_death_long$day.number))
+      plot_deaths(pop_death_long %>% filter(day.number < day_number))
     ggsave(
       paste0(day_number - start_day + 1, "_deaths_norm_aged.png"),
       gg,
