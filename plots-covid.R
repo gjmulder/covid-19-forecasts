@@ -2,7 +2,9 @@ library(tidyverse)
 library(lubridate)
 library(stringi)
 library(directlabels)
-library()
+library(forecast)
+library( ggpubr)
+
 jhu_url_base <-
   paste0(
     "https://raw.githubusercontent.com/CSSEGISandData/",
@@ -147,43 +149,74 @@ pop_confirmed_joined <-
   select(-Location)
 
 china_rest <-
-  paste0("China-", setdiff(china_prov_pop$Division, c("Hubei")))
+  c("Singapore", "Korea, South", paste0("China-", china_prov_pop$Division))
+  # setdiff(china_prov_pop$Division, c("Hubei")))
 # paste0("China-", setdiff(china_prov_pop$Division, c("Hubei", "Hainan", "Hong Kong")))
 
-pop_confirmed_china_rest <-
-  pop_confirmed_joined %>%
-  filter(country %in% china_rest) %>%
-  select(-country) %>%
-  summarise_all(sum) %>%
-  mutate(country = "China-Rest")
+# pop_confirmed_china_rest <-
+#   pop_confirmed_joined %>%
+#   filter(country %in% china_rest) %>%
+#   select(-country) %>%
+#   summarise_all(sum) %>%
+#   mutate(country = "China-Rest")
 
 pop_confirmed_long <-
   pop_confirmed_joined %>%
   filter(! country %in% china_rest) %>%
-  bind_rows(pop_confirmed_china_rest) %>%
+  # bind_rows(pop_confirmed_china_rest) %>%
   mutate_if(is.double, function(d)
     return(d / as.integer(.$population.1M))) %>%
   select(-population.1M) %>%
   mutate(country = paste0("   ", country)) %>%
   gather(date.str, confirmed, -country) %>%
   filter(!is.infinite(confirmed)) %>%
+  filter(!is.nan(confirmed)) %>%
   filter(confirmed > 15.0) %>%
   mutate(dt = mdy(date.str)) %>%
   group_by(country) %>%
   arrange(dt) %>%
-  mutate(day.number = dplyr::row_number())
+  mutate(day.number = dplyr::row_number()) %>%
+  filter(day.number > 5)
+
+conf_ts <-
+  pop_confirmed_long %>%
+  group_by(day.number) %>%
+  summarise(confirmed = sum(confirmed))
+
+fit <- ets(conf_ts$confirmed, lambda = "auto")
+print(checkresiduals(fit))
+fcast <- forecast(fit, h=14)
+print(accuracy(fcast))
+print(autoplot(fcast) + scale_y_log10())
+print(fcast)
+
+# model <- paste0(fit$components[1:3], collapse = '')
+# damped <- fit$components[4] == "TRUE"
+# alpha <- fit$par[1]
+# beta <- fit$par[2]
+# lambda <- fit$lambda
+# conf_df <-
+#   as_tibble(t(cov19_confirmed[, 2:(ncol(cov19_confirmed)-1)]))
+# colnames(conf_df) <- cov19_confirmed$country
 
 gg <-
   ggplot(pop_confirmed_long, aes(x = day.number, y = confirmed, colour = country)) +
-  geom_line() +
+  geom_smooth(method = "lm", se = FALSE) +
   geom_point() +
   scale_y_log10() +
-  scale_x_log10() +
+  # scale_x_log10() +
   xlab("Day number") +
   ylab("Confirmed per 1M population") +
   ggtitle("Covid-19 Confirmed per 1M people (log scales)") +
   geom_dl(aes(label = country), method = list(dl.combine("last.points"), rot =
                                                 -30, cex = 0.7)) +
   guides(col = guide_legend(ncol = 1))
+  # stat_regline_equation(
+  #   aes(label = paste(..eq.label.., ..rr.label.., sep = "~~~~")),
+  #   # label.x = max(mongo_plot_data$search.time)/2,
+  #   # label.y = min_err,
+  #   colour = country,
+  #   na.rm = TRUE
+  # )
 print(gg)
 ggsave("confirmed_norm_aged.png")
