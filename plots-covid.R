@@ -19,13 +19,13 @@ cov19_dead_all <-
 # cov19_recovered_all <-
 #   read_csv(paste0(jhu_url_base, "time_series_19-covid-Recovered.csv"))
 
-cov19_dead_age <-
-  read_csv("age_death_rate.csv") %>%
-  mutate(death.rate.china = death.rate.5year.china * age.range.proportion) %>%
-  mutate(death.rate.korea = death.rate.5year.korea * age.range.proportion) %>%
-  select(-death.rate.5year.china,
-         -death.rate.5year.korea,
-         -age.range.proportion)
+# cov19_dead_age <-
+#   read_csv("age_death_rate.csv") %>%
+#   mutate(death.rate.china = death.rate.5year.china * age.range.proportion) %>%
+#   mutate(death.rate.korea = death.rate.5year.korea * age.range.proportion) %>%
+#   select(-death.rate.5year.china,
+#          -death.rate.5year.korea,
+#          -age.range.proportion)
 
 old_age <-
   c("60-64",
@@ -82,9 +82,9 @@ expand_china_provs <- function() {
   for (i in 1:nrow(china_prop_prov)) {
     # print(china_prop_prov$Division[i])
     for (j in 1:nrow(china_pop)) {
-      # print(paste0(china_prop_prov$Division[i], "-", china_pop$AgeGrp[j]))
+      # print(paste0(china_prop_prov$Division[i], ", ", china_pop$AgeGrp[j]))
       china_prov_lst[[paste(i, j)]]  <- tibble(
-        Location = paste0("China-", china_prop_prov$Division[i]),
+        Location = paste0("China, ", china_prop_prov$Division[i]),
         AgeGrp = china_pop$AgeGrp[j],
         PopMale = china_pop$PopMale[j] * china_prop_prov$prop[i],
         PopFemale = china_pop$PopFemale[j] * china_prop_prov$prop[i]
@@ -116,7 +116,7 @@ cov19_dead_all %>%
   rename(country = `Country/Region`) %>%
   mutate(country = ifelse(
     country == "China",
-    paste0(country, "-", `Province/State`),
+    paste0(country, ", ", `Province/State`),
     country
   )) %>%
   select(-`Province/State`, -Lat, -Long) %>%
@@ -184,43 +184,60 @@ pop_death_joined <-
   select(-Location)
 
 china_rest <-
-  paste0("China-", setdiff(china_prov_pop$Division, c("Hubei")))
-# paste0("China-", setdiff(china_prov_pop$Division, c("Hubei", "Hainan", "Hong Kong")))
+  paste0("China, ", setdiff(china_prov_pop$Division, c("Hubei")))
+# paste0("China, ", setdiff(china_prov_pop$Division, c("Hubei", "Hainan", "Hong Kong")))
 
 pop_death_china_rest <-
   pop_death_joined %>%
   filter(country %in% china_rest) %>%
   select(-country) %>%
   summarise_all(sum) %>%
-  mutate(country = "China-Rest")
+  mutate(country = "China, Rest of")
+
+exclude_countries <-
+  c("Iraq", "Philippines", "Netherlands", "Switzerland")
 
 pop_death_long <-
   pop_death_joined %>%
-  filter(! country %in% china_rest) %>%
+  filter(.[, ncol(.)] > 3) %>%
+  filter(!country %in% china_rest) %>%
   bind_rows(pop_death_china_rest) %>%
   mutate_if(is.double, function(d)
     return(d / as.integer(.$population.1M))) %>%
   select(-population.1M) %>%
-  mutate(country = paste0("   ", country)) %>%
+  filter(!country %in% exclude_countries) %>%
+  mutate(country = ifelse(country == "US", "United States of America", country)) %>%
+  mutate(country = paste0("  ", country)) %>%
   gather(date.str, deaths, -country) %>%
   filter(!is.infinite(deaths)) %>%
-  filter(deaths > 0.1) %>%
+  filter(deaths > 0.001) %>%
   mutate(dt = mdy(date.str)) %>%
   group_by(country) %>%
   arrange(dt) %>%
-  mutate(day.number = dplyr::row_number())
+  mutate(day.number = row_number()) %>%
+  filter(max(day.number) > 4)
+# filter(day.number > 3)
 
 gg <-
   ggplot(pop_death_long, aes(x = day.number, y = deaths, colour = country)) +
-  geom_line() +
-  geom_point() +
-  scale_y_log10() +
-  scale_x_log10() +
+  geom_smooth(se = FALSE, size = 0.75) +
+  # geom_point(size = 0.5) +
+  scale_y_log10(labels = c(0.01, 0.1, 1, 10, 100),
+                breaks = c(0.01, 0.1, 1, 10, 100)) +
+  xlim(1, max(pop_death_long$day.number) + 10) +
+  # scale_x_log10(
+  #   labels = c(1, 2, 4, 8, 16, 32, 64),
+  #   breaks = c(1, 2, 4, 8, 16, 32, 64)
+  # ) +
   xlab("Day number") +
   ylab("Deaths per 1M population greater than 59 years of age") +
-  ggtitle(paste0("Covid-19 deaths per 1M older-aged people (log scales, as of ", today(), ")")) +
-  geom_dl(aes(label = country), method = list(dl.combine("last.points"), rot =
-                                                -30, cex = 0.7)) +
-  guides(col = guide_legend(ncol = 1))
+  ggtitle(paste0(
+    "Covid-19 deaths per 1M older-aged people (log scales, as of ",
+    today() - 1,
+    ")"
+  )) +
+  geom_dl(aes(label = country), method = list(dl.combine("last.points"))) +
+  guides(col = guide_legend(ncol = 1)) +
+  geom_hline(yintercept = 1.0)
 print(gg)
 ggsave("deaths_norm_aged.png")
