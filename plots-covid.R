@@ -204,7 +204,7 @@ pop_death_long <-
   mutate(country = paste0("   ", country)) %>%
   gather(date.str, deaths, -country) %>%
   filter(!is.infinite(deaths)) %>%
-  filter(deaths > 0.3) %>%
+  filter(deaths > 0.1) %>%
   mutate(dt = mdy(date.str)) %>%
   group_by(country) %>%
   arrange(dt) %>%
