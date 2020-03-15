@@ -221,23 +221,20 @@ pop_death_long <-
 gg <-
   ggplot(pop_death_long, aes(x = day.number, y = deaths, colour = country)) +
   geom_smooth(se = FALSE, size = 0.75) +
-  # geom_point(size = 0.5) +
-  scale_y_log10(labels = c(0.01, 0.1, 1, 10, 100),
-                breaks = c(0.01, 0.1, 1, 10, 100)) +
+  scale_y_log10(
+    labels = c(0.01, 0.1, 1, 10, 100),
+    breaks = c(0.01, 0.1, 1, 10, 100),
+    limits = c(0.01, NA)
+  ) +
   xlim(1, max(pop_death_long$day.number) + 10) +
-  # scale_x_log10(
-  #   labels = c(1, 2, 4, 8, 16, 32, 64),
-  #   breaks = c(1, 2, 4, 8, 16, 32, 64)
-  # ) +
   xlab("Day number") +
-  ylab("Deaths per 1M population greater than 59 years of age") +
-  ggtitle(paste0(
-    "Covid-19 deaths per 1M older-aged people (log scales, as of ",
-    today() - 1,
-    ")"
-  )) +
+  ylab("Deaths per 1M population greater than 59 years of age (log scale)") +
+  ggtitle(paste0("Covid-19 deaths per 1M older-aged people (as of ",
+                 today() - 1,
+                 ")")) +
   geom_dl(aes(label = country), method = list(dl.combine("last.points"))) +
-  guides(col = guide_legend(ncol = 1)) +
-  geom_hline(yintercept = 1.0)
+  theme(legend.position = "none") +
+  geom_hline(yintercept = 1.0) +
+  annotate("text", max(pop_death_long$day.number) + 4, 1.1, label = "1 Covid-19 death per 1M older-aged people")
 print(gg)
 ggsave("deaths_norm_aged.png")
