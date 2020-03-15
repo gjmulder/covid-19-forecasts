@@ -69,7 +69,7 @@ china_prov_pop <-
 #
 # Ratio deaths per old age
 
-expand_china_provs <- function(world_pop) {
+expand_china_provs <- function() {
   china_prop_prov <-
     china_prov_pop %>%
     mutate(prop = Population / sum(.$Population))
@@ -100,8 +100,7 @@ expand_china_provs <- function(world_pop) {
 }
 
 expanded_world_pop <-
-  world_pop %>%
-  expand_china_provs
+  expand_china_provs()
 
 old_world_pop <-
   expanded_world_pop %>%
@@ -205,7 +204,7 @@ pop_death_long <-
   mutate(country = paste0("   ", country)) %>%
   gather(date.str, deaths, -country) %>%
   filter(!is.infinite(deaths)) %>%
-  filter(deaths > 0.2) %>%
+  filter(deaths > 0.3) %>%
   mutate(dt = mdy(date.str)) %>%
   group_by(country) %>%
   arrange(dt) %>%
@@ -219,7 +218,7 @@ gg <-
   scale_x_log10() +
   xlab("Day number") +
   ylab("Deaths per 1M population greater than 59 years of age") +
-  ggtitle("Covid-19 deaths per 1M older-aged people (log scales)") +
+  ggtitle(paste0("Covid-19 deaths per 1M older-aged people (log scales, as of ", today(), ")")) +
   geom_dl(aes(label = country), method = list(dl.combine("last.points"), rot =
                                                 -30, cex = 0.7)) +
   guides(col = guide_legend(ncol = 1))
