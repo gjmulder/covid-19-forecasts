@@ -2,7 +2,7 @@ library(tidyverse)
 library(lubridate)
 library(stringi)
 library(directlabels)
-library()
+
 jhu_url_base <-
   paste0(
     "https://raw.githubusercontent.com/CSSEGISandData/",
@@ -179,6 +179,35 @@ print(setdiff(
 
 ###########################################################################################################################
 
+plot_deaths <- function(pop_death_subset, day_number, max_day_number) {
+  gg <-
+    ggplot(pop_death_subset,
+           aes(x = day.number, y = deaths, colour = country)) +
+    geom_smooth(se = FALSE, size = 0.75) +
+    scale_y_log10(
+      labels = c(0.01, 0.1, 1, 10, 100),
+      breaks = c(0.01, 0.1, 1, 10, 100),
+      limits = c(0.01, 400)
+    ) +
+    xlim(1, max_day_number + 10) +
+    xlab("Day number") +
+    ylab("Deaths per 1M population greater than 59 years of age (log scale)") +
+    ggtitle(
+      paste0(
+        "Day #",
+        day_number,
+        " - Covid-19 deaths per 1M maximum-risk (as of ",
+        today() - 1,
+        ")"
+      )
+    ) +
+    geom_dl(aes(label = country), method = list(dl.combine("last.points"))) +
+    theme(legend.position = "none") +
+    geom_hline(yintercept = 1.0) +
+    annotate("text", max(pop_death_long$day.number) + 4, 1.15, label = "1 Covid-19 death per 1M maximum-risk people")
+  return(gg)
+}
+
 pop_death_joined <-
   inner_join(old_world_pop, cov19_dead) %>%
   select(-Location)
@@ -218,23 +247,20 @@ pop_death_long <-
   filter(max(day.number) > 4)
 # filter(day.number > 3)
 
-gg <-
-  ggplot(pop_death_long, aes(x = day.number, y = deaths, colour = country)) +
-  geom_smooth(se = FALSE, size = 0.75) +
-  scale_y_log10(
-    labels = c(0.01, 0.1, 1, 10, 100),
-    breaks = c(0.01, 0.1, 1, 10, 100),
-    limits = c(0.01, NA)
-  ) +
-  xlim(1, max(pop_death_long$day.number) + 10) +
-  xlab("Day number") +
-  ylab("Deaths per 1M population greater than 59 years of age (log scale)") +
-  ggtitle(paste0("Covid-19 deaths per 1M older-aged people (as of ",
-                 today() - 1,
-                 ")")) +
-  geom_dl(aes(label = country), method = list(dl.combine("last.points"))) +
-  theme(legend.position = "none") +
-  geom_hline(yintercept = 1.0) +
-  annotate("text", max(pop_death_long$day.number) + 4, 1.1, label = "1 Covid-19 death per 1M older-aged people")
-print(gg)
-ggsave("deaths_norm_aged.png")
+if (interactive()) {
+  print(plot_deaths(pop_death_long, max(pop_death_long$day.number), max(pop_death_long$day.number)))
+} else {
+  start_day <-
+    7
+  for (day_number in start_day:max(pop_death_long$day.number)) {
+    print(paste0("Generating plot for day: ", day_number))
+    gg <-
+      plot_deaths(pop_death_long %>% filter(day.number < day_number), day_number, max(pop_death_long$day.number))
+    ggsave(
+      paste0(day_number - start_day + 1, "_deaths_norm_aged.png"),
+      gg,
+      width = 15,
+      height = 10
+    )
+  }
+}
