@@ -235,7 +235,7 @@ pop_death_china_rest <-
   mutate(country = "China, Rest of")
 
 exclude_countries <-
-  c("Iraq", "Philippines", "Netherlands", "Switzerland")
+  c("Iraq", "Philippines", "Netherlands", "Switzerland", "Belgium", "Greece")
 
 pop_death_long <-
   pop_death_joined %>%
@@ -259,7 +259,14 @@ pop_death_long <-
 # filter(day.number > 3)
 
 if (interactive()) {
-  print(plot_deaths(pop_death_long))
+  gg <- plot_deaths(pop_death_long)
+  print(gg)
+  ggsave(
+    "deaths_norm_aged.png",
+    gg,
+    width = 15,
+    height = 10
+  )
 } else {
   start_day <-
     7
