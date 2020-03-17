@@ -55,11 +55,12 @@ cov19_cfr_tot <-
   select(-AgeGrp) %>%
   colSums
 
-cov19_old_cfr_prop <-
+cov19_old_cfr_prop_vec <-
   cov19_cfr %>%
   filter(AgeGrp %in% old_age) %>%
   select(-AgeGrp) %>%
   colSums / cov19_cfr_tot
+cov19_old_cfr_prop <- mean(cov19_old_cfr_prop_vec[2:length(cov19_old_cfr_prop_vec)])
 print(old_age)
 print(cov19_old_cfr_prop)
 
@@ -243,7 +244,7 @@ pop_death_long <-
   filter(!country %in% china_rest) %>%
   bind_rows(pop_death_china_rest) %>%
   mutate_if(is.double, function(d)
-    return(d / as.integer(.$population.1M))) %>%
+    return(cov19_old_cfr_prop * d / as.integer(.$population.1M))) %>%
   select(-population.1M) %>%
   filter(!country %in% exclude_countries) %>%
   mutate(country = ifelse(country == "US", "United States of America", country)) %>%
