@@ -235,7 +235,7 @@ pop_death_china_rest <-
   mutate(country = "China, Rest of")
 
 exclude_countries <-
-  c("Iraq", "Philippines", "Netherlands", "Switzerland", "Belgium", "Greece")
+  c("Iraq", "Philippines", "Netherlands", "Switzerland", "Belgium", "Greece", "Sweden", "Poland", "Canada")
 
 pop_death_long <-
   pop_death_joined %>%
