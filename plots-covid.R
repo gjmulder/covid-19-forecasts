@@ -42,25 +42,18 @@ old_age <-
     "100+")
 
 cov19_cfr <-
-  read_csv("case_fatality_rate.csv") %>%
-  mutate(cfr.prop.china = cfr.china * age.range.prop) %>%
-  mutate(cfr.prop.korea = cfr.korea  * age.range.prop) %>%
-  mutate(cfr.prop.diamond.princess = cfr.diamond.princess  * age.range.prop) %>%
-  select(-cfr.china,
-         -cfr.korea,
-         -cfr.diamond.princess)
+  read_csv("case_fatality_rate.csv")
 
-cov19_cfr_tot <-
-  cov19_cfr %>%
-  select(-AgeGrp) %>%
-  colSums
+cov19_cfr_avg <-
+  rowMeans(cov19_cfr[2:4])
 
-cov19_old_cfr_prop_vec <-
-  cov19_cfr %>%
-  filter(AgeGrp %in% old_age) %>%
-  select(-AgeGrp) %>%
-  colSums / cov19_cfr_tot
-cov19_old_cfr_prop <- mean(cov19_old_cfr_prop_vec[2:length(cov19_old_cfr_prop_vec)])
+cov19_cfr_prop <-
+  cov19_cfr_avg / sum(cov19_cfr_avg)
+
+cov19_cfr_df <-
+  tibble(age.grp = cov19_cfr$age.grp, cfr.avg = cov19_cfr_avg, cfr.prop = cov19_cfr_prop)
+cov19_old_cfr_prop <-
+  sum(cov19_cfr_df$cfr.prop[1:3])
 print(old_age)
 print(cov19_old_cfr_prop)
 
@@ -119,13 +112,12 @@ old_world_pop <-
 # Rename countries for Covid data
 
 cov19_dead_all %>%
-  rename(country = `Country/Region`) %>%
   mutate(country = ifelse(
-    country == "China",
-    paste0(country, ", ", `Province/State`),
-    country
+    `Country/Region` == "China",
+    paste0(`Country/Region`, ", ", `Province/State`),
+    `Country/Region`
   )) %>%
-  select(-`Province/State`, -Lat, -Long) %>%
+  select(-`Country/Region`, -`Province/State`, -Lat, -Long) %>%
   group_by(country) %>%
   summarise_all(sum) ->
   cov19_dead
@@ -236,7 +228,8 @@ pop_death_china_rest <-
   mutate(country = "China, Rest of")
 
 exclude_countries <-
-  c("Iraq", "Philippines", "Netherlands", "Switzerland", "Belgium", "Greece", "Sweden", "Poland", "Canada")
+  c("Iraq", "Philippines", "Poland", "Algeria", "Indonesia")
+# c("Iraq", "Philippines", "Netherlands", "Switzerland", "Belgium", "Greece", "Sweden", "Poland", "Canada", "Indonesia")
 
 pop_death_long <-
   pop_death_joined %>%
