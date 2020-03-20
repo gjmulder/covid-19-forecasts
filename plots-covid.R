@@ -191,11 +191,12 @@ plot_deaths <- function(pop_death_subset) {
   gg <-
     ggplot(pop_death_subset,
            aes(x = day.number, y = deaths, colour = country)) +
+    # geom_point() +
     geom_smooth(se = FALSE, size = 0.75) +
     scale_y_log10(
       labels = c(0.01, 0.1, 1, 10, 100),
       breaks = c(0.01, 0.1, 1, 10, 100),
-      limits = c(0.1, 400)
+      limits = c(0.2, 400)
     ) +
     xlim(1, max(pop_death_long$day.number) + 10) +
     xlab("Covid-19 country-specific outbreak day number") +
@@ -244,7 +245,7 @@ pop_death_long <-
   mutate(country = paste0("  ", country)) %>%
   gather(date.str, deaths, -country) %>%
   filter(!is.infinite(deaths)) %>%
-  filter(deaths > 0.1) %>%
+  filter(deaths > 0.2) %>%
   mutate(dt = mdy(date.str)) %>%
   group_by(country) %>%
   arrange(dt) %>%
