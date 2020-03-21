@@ -191,7 +191,7 @@ plot_deaths <- function(pop_death_subset) {
   gg <-
     ggplot(pop_death_subset,
            aes(x = day.number, y = deaths, colour = country)) +
-    # geom_point() +
+    geom_point(size = 0.2) +
     geom_smooth(se = FALSE, size = 0.75) +
     scale_y_log10(
       labels = c(0.01, 0.1, 1, 10, 100),
@@ -229,8 +229,8 @@ pop_death_china_rest <-
   mutate(country = "China, Rest of")
 
 exclude_countries <-
-  c("Iraq", "Philippines", "Poland", "Algeria", "Indonesia")
-# c("Iraq", "Philippines", "Netherlands", "Switzerland", "Belgium", "Greece", "Sweden", "Poland", "Canada", "Indonesia")
+  # c("Iraq", "Philippines", "Poland", "Algeria", "Indonesia")
+  c("Austria", "Norway", "Denmark", "Algeria", "Indonesia", "Iraq", "Philippines", "Netherlands", "Switzerland", "Belgium", "Sweden", "Poland", "Canada", "Indonesia")
 
 pop_death_long <-
   pop_death_joined %>%
