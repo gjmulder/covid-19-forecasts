@@ -192,7 +192,7 @@ plot_deaths <- function(pop_death_subset) {
     ggplot(pop_death_subset,
            aes(x = day.number, y = deaths, colour = country)) +
     geom_point(size = 0.2) +
-    geom_smooth(se = FALSE, size = 0.75) +
+    geom_smooth(se = FALSE, size = 0.3) +
     scale_y_log10(
       labels = c(0.01, 0.1, 1, 10, 100),
       breaks = c(0.01, 0.1, 1, 10, 100),
@@ -206,7 +206,7 @@ plot_deaths <- function(pop_death_subset) {
       max(pop_death_long$dt),
       ")"
     )) +
-    geom_dl(aes(label = country), method = list(dl.combine("last.points"))) +
+    geom_dl(aes(label = country), method = list(dl.combine("last.points"), cex = 0.75)) +
     theme(legend.position = "none") +
     geom_hline(yintercept = 1.0) +
     annotate("text", max(pop_death_long$day.number) + 4, 1.15, label = "1 Covid-19 death per 1M maximum-risk people")
@@ -240,7 +240,7 @@ pop_death_long <-
   mutate_if(is.double, function(d)
     return(cov19_old_cfr_prop * d / as.integer(.$population.1M))) %>%
   select(-population.1M) %>%
-  filter(!country %in% exclude_countries) %>%
+  # filter(!country %in% exclude_countries) %>%
   mutate(country = ifelse(country == "US", "United States of America", country)) %>%
   mutate(country = paste0("  ", country)) %>%
   gather(date.str, deaths, -country) %>%
